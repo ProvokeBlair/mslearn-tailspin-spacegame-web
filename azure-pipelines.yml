@@ -1,40 +1,55 @@
 trigger:
 - '*'
-
 pool:
   vmImage: ubuntu-latest
 
 variables:
   buildConfiguration: 'Release'
+  acrName: 'SpaceGameContainer'  # ACR name (without .azurecr.io)
+  imageName: 'tailspin-spacegame'
+  tag: '$(Build.BuildId)'  # Unique tag per build
+  latestTag: 'latest'
+  serviceName: 'SpaceGameMSDemo'  # Azure Web App name
+  resourceGroup: 'DemoSpaceGame'  # Azure Resource Group
+  azureSubscription: 'BlairSpaceGameDemo'  # Azure DevOps service connection
+  appServicePlan: 'Free'  # App Service Plan name
+  location: 'New Zealand North'  # Change this to your preferred region
 
 steps:
+# Use .NET SDK 6.x
 - task: UseDotNet@2
   displayName: 'Use .NET SDK 6.x'
   inputs:
     packageType: sdk
     version: '6.x'
 
+# Run npm install
 - task: Npm@1
   displayName: 'Run npm install'
   inputs:
     verbose: false
 
+# Compile Sass assets
 - script: './node_modules/.bin/node-sass Tailspin.SpaceGame.Web/wwwroot --output Tailspin.SpaceGame.Web/wwwroot'
   displayName: 'Compile Sass assets'
 
+# Run gulp tasks
 - task: gulp@1
   displayName: 'Run gulp tasks'
 
+# Write build info
 - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
   displayName: 'Write build info'
   workingDirectory: Tailspin.SpaceGame.Web/wwwroot
 
+# Restore project dependencies
 - task: DotNetCoreCLI@2
   displayName: 'Restore project dependencies'
   inputs:
     command: 'restore'
     projects: '**/*.csproj'
 
+# Build the project
 - task: DotNetCoreCLI@2
   displayName: 'Build the project - Release'
   inputs:
@@ -42,6 +57,7 @@ steps:
     arguments: '--no-restore --configuration Release'
     projects: '**/*.csproj'
     
+# Publish the project
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - Release'
   inputs:
@@ -51,6 +67,69 @@ steps:
     arguments: '--no-build --configuration Release --output $(Build.ArtifactStagingDirectory)/Release'
     zipAfterPublish: true
 
+# Publish build artifacts
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   condition: succeeded()
+
+# Docker Build & Push to ACR
+- task: AzureCLI@2
+  displayName: "Login to ACR"
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az acr login --name $(acrName)
+
+- task: Docker@2
+  displayName: "Build Docker Image"
+  inputs:
+    command: build
+    dockerfile: Dockerfile
+    repository: $(acrName).azurecr.io/$(imageName)
+    tags: $(tag),$(latestTag)
+
+- task: Docker@2
+  displayName: "Push Docker Image to ACR"
+  inputs:
+    command: push
+    repository: $(acrName).azurecr.io/$(imageName)
+    tags: $(tag),$(latestTag)
+
+# Create Web App if not exists
+- task: AzureCLI@2
+  displayName: "Create Azure Web App"
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      if ! az webapp show --name $(serviceName) --resource-group $(resourceGroup) &> /dev/null; then
+        echo "Creating App Service Plan..."
+        az appservice plan create --name $(appServicePlan) --resource-group $(resourceGroup) --sku B1 --is-linux --location $(location)
+        
+        echo "Creating Web App..."
+        az webapp create --name $(serviceName) --resource-group $(resourceGroup) --plan $(appServicePlan) --deployment-container-image-name $(acrName).azurecr.io/$(imageName):$(tag)
+        
+        echo "Configuring Web App to use ACR..."
+        az webapp config container set --name $(serviceName) --resource-group $(resourceGroup) --docker-custom-image-name $(acrName).azurecr.io/$(imageName):$(tag) --docker-registry-server-url https://$(acrName).azurecr.io
+        
+        echo "Web App successfully created!"
+      else
+        echo "Web App already exists, skipping creation."
+      fi
+
+# Deploy to Azure Web App (Production)
+- task: AzureWebAppContainer@1
+  displayName: "Deploy to Production"
+  inputs:
+    azureSubscription: $(azureSubscription)
+    appName: $(serviceName)
+    containers: "$(acrName).azurecr.io/$(imageName):$(tag)"
+
+# Health Check
+- script: |
+    echo "Running Post-Deployment Health Check..."
+    curl -f https://$(serviceName).azurewebsites.net/health || exit 1
+  displayName: "Post-Deployment Health Check"
