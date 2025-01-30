@@ -82,30 +82,6 @@ steps:
     inlineScript: |
       az acr login --name $(acrName)
 
-
-# Create Web App if not exists
-- task: AzureCLI@2
-  displayName: "Create Azure Web App"
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      if ! az webapp show --name $(serviceName) --resource-group $(resourceGroup) &> /dev/null; then
-        echo "Creating App Service Plan..."
-        az appservice plan create --name $(appServicePlan) --resource-group $(resourceGroup) --sku B1 --is-linux --location $(location)
-        
-        echo "Creating Web App..."
-        az webapp create --name $(serviceName) --resource-group $(resourceGroup) --plan $(appServicePlan) --deployment-container-image-name $(acrName).azurecr.io/$(imageName):$(tag)
-        
-        echo "Configuring Web App to use ACR..."
-        az webapp config container set --name $(serviceName) --resource-group $(resourceGroup) --docker-custom-image-name $(acrName).azurecr.io/$(imageName):$(tag) --docker-registry-server-url https://$(acrName).azurecr.io
-        
-        echo "Web App successfully created!"
-      else
-        echo "Web App already exists, skipping creation."
-      fi
-
 # Deploy to Azure Web App (Production)
 - task: AzureWebAppContainer@1
   displayName: "Deploy to Production"
