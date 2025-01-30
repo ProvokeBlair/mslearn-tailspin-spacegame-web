@@ -9,7 +9,7 @@ variables:
   imageName: 'tailspin-spacegame'
   tag: '$(Build.BuildId)'  # Unique tag per build
   latestTag: 'latest'
-  serviceName: 'SpaceGameMSDemo'  # Azure Web App name
+  serviceName: 'spacegamemsdemo-eye4g8guehe3c0bu.newzealandnorth-01'  # Azure Web App name
   resourceGroup: 'DemoSpaceGame'  # Azure Resource Group
   azureSubscription: 'BlairSpaceGameDemo'  # Azure DevOps service connection
   appServicePlan: 'F1'  # App Service Plan name
