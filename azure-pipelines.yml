@@ -13,7 +13,7 @@ variables:
   resourceGroup: 'DemoSpaceGame'  # Azure Resource Group
   azureSubscription: 'BlairSpaceGameDemo'  # Azure DevOps service connection
   appServicePlan: 'F1'  # App Service Plan name
-  location: 'newzealandnorth'  # Change this to your preferred region
+  location: 'NZN'  # Change this to your preferred region
 
 steps:
 # Use .NET SDK 6.x
