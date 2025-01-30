@@ -12,8 +12,8 @@ variables:
   serviceName: 'SpaceGameMSDemo'  # Azure Web App name
   resourceGroup: 'DemoSpaceGame'  # Azure Resource Group
   azureSubscription: 'BlairSpaceGameDemo'  # Azure DevOps service connection
-  appServicePlan: 'Free'  # App Service Plan name
-  location: 'New Zealand North'  # Change this to your preferred region
+  appServicePlan: 'F1'  # App Service Plan name
+  location: 'newzealandnorth'  # Change this to your preferred region
 
 steps:
 # Use .NET SDK 6.x
