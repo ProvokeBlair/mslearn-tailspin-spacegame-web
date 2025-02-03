@@ -88,7 +88,7 @@ steps:
     containerRegistry: SpaceGameACRConnection  # ACR service connection (fixed)
     repository: "$(containerRepository)"
     command: buildAndPush
-    Dockerfile: '**/Dockerfile'
+    Dockerfile: '.devcontainer/Dockerfile'
     tags: |
       $(tag)
 
