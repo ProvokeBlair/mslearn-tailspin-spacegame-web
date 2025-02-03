@@ -1,19 +1,18 @@
 trigger:
 - '*'
+
 pool:
   vmImage: ubuntu-latest
 
 variables:
   buildConfiguration: 'Release'
   acrName: 'SpaceGameContainer'  # ACR name (without .azurecr.io)
-  imageName: 'tailspin-spacegame'
+  containerRepository: 'tailspin-spacegame'  # ACR repository
   tag: '$(Build.BuildId)'  # Unique tag per build
-  latestTag: 'latest'
   serviceName: 'SpaceGameMSDemo'  # Azure Web App name
   resourceGroup: 'DemoSpaceGame'  # Azure Resource Group
   azureSubscription: 'BlairSpaceGameDemo'  # Azure DevOps service connection
-  appServicePlan: 'F1'  # App Service Plan name
-  location: 'NZN'  # Change this to your preferred region
+  containerName: 'SpaceGameContainer'  # Name of the ACI instance
 
 steps:
 # Use .NET SDK 6.x
@@ -64,30 +63,4 @@ steps:
     command: 'publish'
     projects: '**/*.csproj'
     publishWebProjects: false
-    arguments: '--no-build --configuration Release --output $(Build.ArtifactStagingDirectory)/Release'
-    zipAfterPublish: true
-
-# Publish build artifacts
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: drop'
-  condition: succeeded()
-
-# Docker Build & Push to ACR
-- task: AzureCLI@2
-  displayName: "Login to ACR"
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      az acr login --name $(acrName)
-
-# Deploy to Azure Web App (Production)
-- task: AzureWebAppContainer@1
-  displayName: "Deploy to Production"
-  inputs:
-    azureSubscription: $(azureSubscription)
-    appName: $(serviceName)
-    containers: "$(acrName).azurecr.io/$(imageName):$(tag)"
-
-
+    arguments: '--no-build -'
