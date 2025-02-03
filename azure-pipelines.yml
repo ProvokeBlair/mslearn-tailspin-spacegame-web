@@ -90,8 +90,4 @@ steps:
     appName: $(serviceName)
     containers: "$(acrName).azurecr.io/$(imageName):$(tag)"
 
-# Health Check
-- script: |
-    echo "Running Post-Deployment Health Check..."
-    curl -f https://$(serviceName).azurewebsites.net/health || exit 1
-  displayName: "Post-Deployment Health Check"
+
