@@ -71,6 +71,12 @@ steps:
   displayName: 'Publish Artifact: drop'
   condition: succeeded()
 
+# Debug step: List artifact contents before building the Docker image
+- script: |
+    echo "Validating artifact before Docker build..."
+    ls -lah $(Build.ArtifactStagingDirectory)/release/
+  displayName: 'Debug Artifact Contents'
+
 # Login to Azure Container Registry (ACR)
 - task: AzureCLI@2
   displayName: "Login to ACR"
