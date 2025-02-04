@@ -1,46 +1,25 @@
-FROM mcr.microsoft.com/devcontainers/dotnet:6.0
+# Base Image (Ensure it matches your runtime)
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+WORKDIR /app
 
-# Install NodeJS
+# Install Node.js (if needed for frontend tasks)
 ARG NODE_VERSION="16"
-RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION}"; fi
+RUN if [ "${NODE_VERSION}" != "none" ]; then \
+      apt-get update && apt-get install -y curl && \
+      curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+      apt-get install -y nodejs && \
+      npm install --global gulp-cli; \
+    fi
 
-# Install Gulp CLI globally
-RUN npm install --global gulp-cli
+# Copy the artifact from the pipeline into the container
+# The pipeline should place the built application into the "artifact" folder
+COPY artifact /app
 
-# Install Azure CLI
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+# Set permissions (if needed)
+RUN chmod -R 755 /app
 
-# Optional: Install zsh
-ARG INSTALL_ZSH="true"
-ARG UPGRADE_PACKAGES="false"
+# Expose the necessary port (adjust based on your application)
+EXPOSE 80
 
-# Set up non-root user and install common dependencies
-ARG USERNAME=vscode
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
-COPY library-scripts/*.sh /tmp/library-scripts/
-RUN bash /tmp/library-scripts/common-debian.sh "${INSTALL_ZSH}" "${USERNAME}" "${USER_UID}" "${USER_GID}" "${UPGRADE_PACKAGES}" "true" "true"
-
-# Set working directory for Azure DevOps agent
-WORKDIR /home/vscode/azure-pipelines
-
-# Define Azure DevOps agent version
-ARG ARCH="x64"
-ARG AGENT_VERSION="4.251.0"
-
-# Download and extract the agent
-RUN curl -O -L https://vstsagentpackage.azureedge.net/agent/${AGENT_VERSION}/vsts-agent-linux-${ARCH}-${AGENT_VERSION}.tar.gz \
-    && tar xzf vsts-agent-linux-${ARCH}-${AGENT_VERSION}.tar.gz \
-    && chmod +x ./bin/installdependencies.sh \
-    && ./bin/installdependencies.sh
-
-# Copy start script and ensure permissions
-COPY library-scripts/start.sh /home/vscode/azure-pipelines/start.sh
-RUN chown vscode:vscode /home/vscode/azure-pipelines/start.sh \
-    && chmod +x /home/vscode/azure-pipelines/start.sh
-
-# Clean up
-RUN rm -rf /var/lib/apt/lists/* /tmp/library-scripts /home/vscode/azure-pipelines/*.tar.gz
-
-# Default working directory
-WORKDIR /home/vscode
+# Define the entry point to run the application
+CMD ["dotnet", "/app/YourApplication.dll"]
