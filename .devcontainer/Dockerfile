@@ -1,25 +1,15 @@
-# Base Image (Ensure it matches your runtime)
+# Use the official .NET runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
 WORKDIR /app
 
-# Install Node.js (if needed for frontend tasks)
-ARG NODE_VERSION="16"
-RUN if [ "${NODE_VERSION}" != "none" ]; then \
-      apt-get update && apt-get install -y curl && \
-      curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-      apt-get install -y nodejs && \
-      npm install --global gulp-cli; \
-    fi
+# Log statement: Print the contents of the artifact folder before copying
+RUN echo "Checking if artifact exists..." && ls -lah /Drop/release/
 
-# Copy the artifact from the pipeline into the container
-# The pipeline should place the built application into the "artifact" folder
-COPY artifact /app
+# Copy the artifact from the pipeline
+COPY Drop/release/ /app/
 
-# Set permissions (if needed)
-RUN chmod -R 755 /app
+# Log statement: Validate the copied files
+RUN echo "Contents of /app after copying:" && ls -lah /app
 
-# Expose the necessary port (adjust based on your application)
-EXPOSE 80
-
-# Define the entry point to run the application
+# Set the entry point
 CMD ["dotnet", "/app/YourApplication.dll"]
